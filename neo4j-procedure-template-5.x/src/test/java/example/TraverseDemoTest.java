@@ -13,6 +13,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -26,14 +28,18 @@ class TraverseDemoTest {
 
         var sw = new StringWriter();
         try (var in = new BufferedReader(new InputStreamReader(getClass().getResourceAsStream("/movie.cypher")))) {
-            in.transferTo(sw);
+            String line;
+            while ((line = in.readLine()) != null) {
+                sw.write(line);
+                sw.write(System.lineSeparator()); // Assurez-vous que les lignes sont bien séparées
+            }
             sw.flush();
         }
 
         this.embeddedDatabaseServer = Neo4jBuilders.newInProcessBuilder()
-            .withProcedure(TraverseDemo.class)
-            .withFixture(sw.toString())
-            .build();
+                .withProcedure(TraverseDemo.class)
+                .withFixture(sw.toString())
+                .build();
     }
 
     @AfterAll
@@ -44,7 +50,7 @@ class TraverseDemoTest {
     @Test
     void findKeanuReevesCoActors() {
 
-        try(
+        try (
                 var driver = GraphDatabase.driver(embeddedDatabaseServer.boltURI());
                 var session = driver.session()
         ) {
@@ -55,20 +61,20 @@ class TraverseDemoTest {
                     with coactors.name as names order by names
                     return distinct names
                     """)
-                .stream()
-                    .map(r -> r.get("names"))
-                    .map(Value::asString)
-                    .toList();
+                    .stream()
+                    .map(r -> r.get("names").asString())  // Extraction explicite de la valeur sous forme de String
+                    .collect(Collectors.toList());  // Remplacer toList() par collect()
 
             // language=cypher
             var records = session.run("call travers.findCoActors('Keanu Reeves')").list();
 
             var coActorNames = records.stream()
                     .map(r -> r.get("node"))
-                    .map(node -> node.get("name"))
-                    .map(Value::asString)
+                    .map(node -> node.get("name").asString())  // Extraction explicite de la valeur sous forme de String
                     .sorted()
-                    .toList();
+                    .collect(Collectors.toList());  // Remplacer toList() par collect()
+
+            // Comparaison des résultats
             assertThat(coActorNames).hasSize(names.size());
             assertThat(coActorNames).containsAll(names);
         }

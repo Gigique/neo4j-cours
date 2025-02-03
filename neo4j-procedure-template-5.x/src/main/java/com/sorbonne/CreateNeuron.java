@@ -6,7 +6,7 @@ import org.neo4j.procedure.*;
 
 import java.util.stream.Stream;
 
-
+@Deprecated  // Ajouter cette annotation à la classe
 public class CreateNeuron {
     // This gives us a log instance that outputs messages to the
     // standard log, normally found under `data/log/console.log`
